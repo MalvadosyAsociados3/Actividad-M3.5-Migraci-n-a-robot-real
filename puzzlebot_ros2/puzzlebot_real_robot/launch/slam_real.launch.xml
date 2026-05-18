@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  slam_real.launch.xml
+  Modo SLAM para el robot fisico.
+
+  Flujo:
+    1. real_robot_core.launch.xml   (hardware: microROS, LiDAR, odom, TF)
+    2. slam_toolbox (modo async)    (genera el mapa en tiempo real)
+    3. RViz2 con perfil de SLAM     (visualizacion)
+
+  Para mapear: usa teleop_twist_keyboard en otra terminal y maneja el robot
+  recorriendo todo el laberinto. Al terminar, guarda con:
+    ros2 run nav2_map_server map_saver_cli -f \
+      ~/ros2_ws/src/puzzlebot_ros2/puzzlebot_real_robot/maps/map_maze_real
+-->
+<launch>
+
+  <arg name="use_sim_time" default="false"/>
+
+  <!-- 1) Hardware base del Puzzlebot fisico -->
+  <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  </include>
+
+  <!-- 2) SLAM Toolbox (online async) con params del robot real -->
+  <let name="slam_params_file"
+       value="$(find-pkg-share puzzlebot_real_robot)/config/slam_toolbox_real.yaml"/>
+
+  <node pkg="slam_toolbox" exec="async_slam_toolbox_node"
+        name="slam_toolbox" output="screen">
+    <param from="$(var slam_params_file)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <!-- 3) RViz reutilizando el perfil de SLAM de puzzlebot_navigation2 -->
+  <let name="rviz_config"
+       value="$(find-pkg-share puzzlebot_navigation2)/rviz/slam.rviz"/>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"
+        args="-d $(var rviz_config)">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+</launch>

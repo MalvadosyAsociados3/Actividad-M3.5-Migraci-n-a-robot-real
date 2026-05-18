@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  nav2_real.launch.xml
+  Modo navegacion autonoma para el robot fisico.
+
+  Flujo:
+    1. real_robot_core.launch.xml     (hardware: microROS, LiDAR, odom, TF)
+    2. nav2_bringup/bringup_launch.py (map_server, AMCL, planner, controller,
+                                       bt_navigator, lifecycle_manager)
+    3. RViz2 con perfil de navegacion
+
+  Usa nav2_params_real.yaml y el mapa generado con slam_real.launch.xml.
+-->
+<launch>
+
+  <arg name="use_sim_time" default="false"/>
+  <arg name="map"
+       default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"
+       description="Ruta absoluta al yaml del mapa real"/>
+  <arg name="autostart" default="true"/>
+
+  <!-- 1) Hardware base del Puzzlebot fisico -->
+  <include file="$(find-pkg-share puzzlebot_real_robot)/launch/real_robot_core.launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  </include>
+
+  <!-- 2) Nav2 bringup completo con params del robot real -->
+  <let name="nav2_params"
+       value="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>
+
+  <include file="$(find-pkg-share nav2_bringup)/launch/bringup_launch.py">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="map"          value="$(var map)"/>
+    <arg name="params_file"  value="$(var nav2_params)"/>
+    <arg name="autostart"    value="$(var autostart)"/>
+  </include>
+
+  <!-- 3) RViz con perfil de navegacion -->
+  <let name="rviz_config"
+       value="$(find-pkg-share puzzlebot_navigation2)/rviz/nav2.rviz"/>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"
+        args="-d $(var rviz_config)">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+</launch>

@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>puzzlebot_real_robot</name>
+  <version>0.1.0</version>
+  <description>
+    Bringup del Puzzlebot fisico: micro-ROS agent, RPLiDAR real, odometria,
+    joint_states, transformaciones estaticas y launch files de SLAM + Nav2
+    para hardware real. Reemplaza al paquete puzzlebot_gazebo en el flujo
+    del robot fisico.
+  </description>
+  <maintainer email="student@tec.mx">TE3003B Team</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Reutilizamos description y navigation2 para el modelo y stack Nav2.
+       NO dependemos de puzzlebot_gazebo: ese paquete es exclusivo de simulacion. -->
+  <exec_depend>puzzlebot_description</exec_depend>
+  <exec_depend>puzzlebot_navigation2</exec_depend>
+
+  <!-- Stack de navegacion -->
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+
+  <!-- Hardware real -->
+  <exec_depend>micro_ros_agent</exec_depend>
+  <exec_depend>rplidar_ros</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

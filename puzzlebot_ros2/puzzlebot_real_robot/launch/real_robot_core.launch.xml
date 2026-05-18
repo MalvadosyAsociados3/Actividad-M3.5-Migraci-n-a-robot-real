@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<!--
+  real_robot_core.launch.xml
+  Bringup del Puzzlebot FISICO. Lanza todo lo que pertenece al hardware:
+
+    1. micro_ros_agent       (puente serial / UDP con el microcontrolador)
+    2. RPLiDAR A1            (driver del sensor LiDAR real)
+    3. robot_state_publisher (publica TF a partir del URDF)
+    4. joint_state_publisher (publica /joint_states de las ruedas)
+    5. puzzlebot_localization (odom -> base_footprint via encoders/dead reckoning)
+    6. static_transform_publisher (laser_frame -> lidar_link, ajuste de montaje)
+
+  Este launch NO depende de Gazebo ni del paquete puzzlebot_gazebo.
+  Es el reemplazo directo de puzzlebot_gazebo.launch.py en el flujo real.
+-->
+<launch>
+
+  <!-- ────────────────── Argumentos comunes ────────────────── -->
+  <arg name="use_sim_time"      default="false"
+       description="Siempre false en robot fisico"/>
+  <arg name="serial_port"       default="/dev/ttyUSB0"
+       description="Puerto serial del RPLiDAR"/>
+  <arg name="microros_port"     default="/dev/ttyACM0"
+       description="Puerto serial del micro-ROS agent del Puzzlebot"/>
+  <arg name="microros_baud"     default="115200"/>
+  <arg name="rplidar_frame_id"  default="lidar_link"/>
+
+  <!-- ────────────────── 1) micro-ROS agent ────────────────── -->
+  <!-- Conecta con el microcontrolador del Puzzlebot via serial.
+       Suscribe /cmd_vel y publica /odom, /joint_states (segun firmware). -->
+  <node pkg="micro_ros_agent" exec="micro_ros_agent"
+        name="microros_agent" output="screen"
+        args="serial --dev $(var microros_port) -b $(var microros_baud)"/>
+
+  <!-- ────────────────── 2) RPLiDAR A1 (LiDAR 2D) ────────────────── -->
+  <!-- Publica /scan (sensor_msgs/LaserScan) en el frame lidar_link. -->
+  <node pkg="rplidar_ros" exec="rplidar_composition"
+        name="rplidar_node" output="screen">
+    <param name="serial_port"    value="$(var serial_port)"/>
+    <param name="serial_baudrate" value="115200"/>
+    <param name="frame_id"       value="$(var rplidar_frame_id)"/>
+    <param name="inverted"       value="false"/>
+    <param name="angle_compensate" value="true"/>
+    <param name="scan_mode"      value="Standard"/>
+    <param name="use_sim_time"   value="$(var use_sim_time)"/>
+  </node>
+
+  <!-- ────────────────── 3) robot_state_publisher ─────────────────
+       URDF SIN tags de Gazebo. La descripcion del robot se reutiliza
+       del paquete puzzlebot_description, pero no se cargan plugins
+       de simulacion (libgazebo_ros_diff_drive, libgazebo_ros_ray_sensor).
+       Si tu URDF tiene tags <gazebo>, NO afectan a robot_state_publisher;
+       solo serian leidos por Gazebo. Aun asi recomendamos un archivo
+       URDF separado sin esos tags para el robot real.
+  -->
+  <let name="urdf_path"
+       value="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.urdf.xacro"/>
+
+  <node pkg="robot_state_publisher" exec="robot_state_publisher"
+        name="robot_state_publisher" output="screen">
+    <param name="robot_description"
+           value="$(command 'xacro $(var urdf_path)')"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <!-- ────────────────── 4) joint_state_publisher (ruedas) ─────────
+       Publica /joint_states a partir de las posiciones de las ruedas
+       leidas por encoders (reportadas por el firmware via micro-ROS).
+       Si el firmware ya las publica directamente, este nodo es opcional. -->
+  <node pkg="puzzlebot_real_robot" exec="puzzlebot_joint_state_publisher.py"
+        name="puzzlebot_joint_state_publisher" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <!-- ────────────────── 5) Odometria por encoders ─────────────────
+       Si el firmware ya publica /odom no necesitas este nodo.
+       Si publica solo encoders crudos, este script integra y publica
+       odom -> base_footprint. -->
+  <node pkg="puzzlebot_real_robot" exec="puzzlebot_localization.py"
+        name="puzzlebot_localization" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="publish_tf"   value="true"/>
+  </node>
+
+  <!-- ────────────────── 6) TF estatico: ajuste de montaje del LiDAR ──
+       Si el sensor fisico esta montado con un offset/rotacion distinto
+       al que define el URDF, corrige aqui. Por defecto identidad. -->
+  <node pkg="tf2_ros" exec="static_transform_publisher"
+        name="lidar_static_tf" output="screen"
+        args="0 0 0 0 0 0 lidar_link laser"/>
+
+</launch>
