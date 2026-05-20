@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!--
+  laptop_nav2.launch.xml
+  Lo que corre en la LAPTOP para navegar con el Puzzlebot fisico.
+
+  Asume que en la Jetson ya estan corriendo:
+    - micro_ros_agent
+    - real_robot_core.launch.xml (RPLiDAR + odom + TF + joint_states)
+
+  Y que ambas maquinas comparten ROS_DOMAIN_ID en la misma LAN.
+
+  Pasos en RViz:
+    1. Fijar pose inicial con "2D Pose Estimate" donde esta el robot.
+    2. Mandar goal con "Nav2 Goal", o lanzar go_and_return.py.
+-->
+<launch>
+
+  <arg name="use_sim_time" default="false"/>
+  <arg name="autostart"    default="true"/>
+  <arg name="map"
+       default="$(find-pkg-share puzzlebot_real_robot)/maps/map_maze_real.yaml"
+       description="Mapa generado con laptop_slam.launch.xml"/>
+
+  <let name="nav2_params"
+       value="$(find-pkg-share puzzlebot_real_robot)/config/nav2_params_real.yaml"/>
+
+  <include file="$(find-pkg-share nav2_bringup)/launch/bringup_launch.py">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="map"          value="$(var map)"/>
+    <arg name="params_file"  value="$(var nav2_params)"/>
+    <arg name="autostart"    value="$(var autostart)"/>
+  </include>
+
+  <let name="rviz_config"
+       value="$(find-pkg-share puzzlebot_navigation2)/rviz/nav2.rviz"/>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"
+        args="-d $(var rviz_config)">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+</launch>

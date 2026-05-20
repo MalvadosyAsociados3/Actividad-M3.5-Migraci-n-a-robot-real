@@ -24,13 +24,19 @@
        description="Puerto serial del micro-ROS agent del Puzzlebot"/>
   <arg name="microros_baud"     default="115200"/>
   <arg name="rplidar_frame_id"  default="lidar_link"/>
+  <!-- En la Jetson del Puzzlebot el micro_ros_agent suele lanzarse en una
+       terminal aparte; por eso por defecto NO lo arrancamos aqui. Pon
+       launch_microros:=true si quieres que este launch lo incluya. -->
+  <arg name="launch_microros"   default="false"
+       description="Si true, este launch arranca tambien el micro_ros_agent"/>
 
-  <!-- ────────────────── 1) micro-ROS agent ────────────────── -->
+  <!-- ────────────────── 1) micro-ROS agent (opcional) ────────────────── -->
   <!-- Conecta con el microcontrolador del Puzzlebot via serial.
        Suscribe /cmd_vel y publica /odom, /joint_states (segun firmware). -->
   <node pkg="micro_ros_agent" exec="micro_ros_agent"
         name="microros_agent" output="screen"
-        args="serial --dev $(var microros_port) -b $(var microros_baud)"/>
+        args="serial --dev $(var microros_port) -b $(var microros_baud)"
+        if="$(var launch_microros)"/>
 
   <!-- ────────────────── 2) RPLiDAR A1 (LiDAR 2D) ────────────────── -->
   <!-- Publica /scan (sensor_msgs/LaserScan) en el frame lidar_link. -->
@@ -53,33 +59,41 @@
        solo serian leidos por Gazebo. Aun asi recomendamos un archivo
        URDF separado sin esos tags para el robot real.
   -->
+  <!-- Usamos un URDF plano (pre-procesado) para no depender de xacro en
+       la Jetson. Generar en la laptop con:
+         xacro puzzlebot.urdf.xacro -o puzzlebot.urdf
+       y rsync al paquete puzzlebot_description antes de build. -->
   <let name="urdf_path"
-       value="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.urdf.xacro"/>
+       value="$(find-pkg-share puzzlebot_description)/urdf/puzzlebot.urdf"/>
 
   <node pkg="robot_state_publisher" exec="robot_state_publisher"
         name="robot_state_publisher" output="screen">
     <param name="robot_description"
-           value="$(command 'xacro $(var urdf_path)')"/>
+           value="$(command 'cat $(var urdf_path)')"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 
   <!-- ────────────────── 4) joint_state_publisher (ruedas) ─────────
        Publica /joint_states a partir de las posiciones de las ruedas
        leidas por encoders (reportadas por el firmware via micro-ROS).
-       Si el firmware ya las publica directamente, este nodo es opcional. -->
+       El firmware del Puzzlebot publica /VelocityEncL y /VelocityEncR;
+       nuestros scripts se suscriben a /wl y /wr → remap. -->
   <node pkg="puzzlebot_real_robot" exec="puzzlebot_joint_state_publisher.py"
         name="puzzlebot_joint_state_publisher" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="/wl" to="/VelocityEncL"/>
+    <remap from="/wr" to="/VelocityEncR"/>
   </node>
 
   <!-- ────────────────── 5) Odometria por encoders ─────────────────
-       Si el firmware ya publica /odom no necesitas este nodo.
-       Si publica solo encoders crudos, este script integra y publica
-       odom -> base_footprint. -->
+       Integra las velocidades de encoders del firmware y publica /odom
+       + TF odom -> base_footprint. Mismo remap que el nodo anterior. -->
   <node pkg="puzzlebot_real_robot" exec="puzzlebot_localization.py"
         name="puzzlebot_localization" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
     <param name="publish_tf"   value="true"/>
+    <remap from="/wl" to="/VelocityEncL"/>
+    <remap from="/wr" to="/VelocityEncR"/>
   </node>
 
   <!-- ────────────────── 6) TF estatico: ajuste de montaje del LiDAR ──

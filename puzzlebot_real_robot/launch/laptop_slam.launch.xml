@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+  laptop_slam.launch.xml
+  Lo que corre en la LAPTOP para mapear la pista fisica con el Puzzlebot.
+
+  Asume que en la Jetson ya estan corriendo:
+    - micro_ros_agent
+    - real_robot_core.launch.xml (RPLiDAR + odom + TF + joint_states)
+
+  Y que ambas maquinas comparten ROS_DOMAIN_ID en la misma LAN, asi que
+  /scan, /odom y /tf llegan a la laptop por DDS.
+
+  Para guardar el mapa cuando termines de mapear:
+    ros2 run nav2_map_server map_saver_cli \
+      -f ~/ros2_ws/src/puzzlebot_ros2/puzzlebot_real_robot/maps/map_maze_real
+-->
+<launch>
+
+  <arg name="use_sim_time" default="false"/>
+
+  <let name="slam_params_file"
+       value="$(find-pkg-share puzzlebot_real_robot)/config/slam_toolbox_real.yaml"/>
+
+  <node pkg="slam_toolbox" exec="async_slam_toolbox_node"
+        name="slam_toolbox" output="screen">
+    <param from="$(var slam_params_file)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <let name="rviz_config"
+       value="$(find-pkg-share puzzlebot_navigation2)/rviz/slam.rviz"/>
+
+  <node pkg="rviz2" exec="rviz2" name="rviz2" output="screen"
+        args="-d $(var rviz_config)">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+</launch>
