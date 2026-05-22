@@ -164,11 +164,11 @@ controller_server:
       rotate_to_heading_angular_vel: 0.7
 
       # Lookahead: ~2-3x el largo del robot (0.20 m)
-      lookahead_dist: 0.50
-      min_lookahead_dist: 0.35
-      max_lookahead_dist: 0.70
+      lookahead_dist: 0.40
+      min_lookahead_dist: 0.25
+      max_lookahead_dist: 0.55
       lookahead_time: 1.5
-      use_velocity_scaled_lookahead_dist: false
+      use_velocity_scaled_lookahead_dist: true   # adapta lookahead a velocidad actual
 
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.6
@@ -177,8 +177,8 @@ controller_server:
       max_allowed_time_to_collision_up_to_carrot: 1.5
 
       use_regulated_linear_velocity_scaling: true
-      regulated_linear_scaling_min_radius: 0.7
-      regulated_linear_scaling_min_speed: 0.08
+      regulated_linear_scaling_min_radius: 0.4    # frena antes en curvas cerradas
+      regulated_linear_scaling_min_speed: 0.05    # velocidad minima en curvas
 
       use_cost_regulated_linear_velocity_scaling: true
 
@@ -243,10 +243,8 @@ local_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 4.0
-        # Pasillo 60 cm - robot 19.1 cm = ~20 cm de margen por lado.
-        # inflation_radius = robot_radius (0.14) + buffer = 0.20 m.
-        inflation_radius: 0.20
+        cost_scaling_factor: 2.5       # bajo = costo decae lento = prefiere centro del pasillo
+        inflation_radius: 0.35         # zona de penalizacion mas amplia para separarse de paredes
 
       always_send_full_costmap: True
 
@@ -298,8 +296,8 @@ global_costmap:
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.20
+        cost_scaling_factor: 2.5       # bajo = costo decae lento = prefiere centro del pasillo
+        inflation_radius: 0.35         # zona de penalizacion mas amplia para separarse de paredes
 
       always_send_full_costmap: True
 
