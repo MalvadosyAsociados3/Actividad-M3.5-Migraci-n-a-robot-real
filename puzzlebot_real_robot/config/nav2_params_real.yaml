@@ -159,7 +159,7 @@ controller_server:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
 
       # Velocidades fisicas SEGURAS (mas bajas que en sim)
-      desired_linear_vel: 0.20
+      desired_linear_vel: 0.15
       max_angular_accel: 1.2
       rotate_to_heading_angular_vel: 0.5
 
@@ -289,7 +289,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 1.5       # muy bajo = costo decae lento = fuerza al centro del pasillo
-        inflation_radius: 0.15         # pasillo=60cm, 0.20*2=40cm, deja 20cm libres en centro
+        inflation_radius: 0.12         # pasillo=60cm, 0.20*2=40cm, deja 20cm libres en centro
 
       always_send_full_costmap: True
 
@@ -328,7 +328,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.50              # mas tolerante para goals cerca de paredes
+      tolerance: 0.5              # mas tolerante para goals cerca de paredes
       use_astar: true
       allow_unknown: false
 
